@@ -392,7 +392,9 @@ class LinkedinPy:
 
 
         temp_search_url = search_url + "&page=1"
-        if self.test_page(temp_search_url=temp_search_url, page_no=1)==False:
+        print(temp_search_url)
+        time.sleep(10)
+        if self.test_page(search_url=temp_search_url, page_no=1)==False:
             self.logger.info("============Definitely no Result, Next Query==============")
             return 0
 
@@ -402,7 +404,7 @@ class LinkedinPy:
             while True and trial < 5 and st > 1:
                 st = random.randint(1, st-1)
                 temp_search_url = search_url + "&page=" + str(st)
-                if self.test_page(temp_search_url):
+                if self.test_page(temp_search_url,st):
                     break
                 trial = trial + 1
         else:
