@@ -352,10 +352,10 @@ class LinkedinPy:
                 self.logger.error(e)
             self.logger.info("============Next Page==============")
 
-    def test_page(self, search_url, page_no):
+    def test_page(self, search_url, page_no, css_selector_identifier):
         web_address_navigator(Settings,self.browser, search_url)
         self.logger.info("Testing page: {}".format(page_no))
-        if len(self.browser.find_elements_by_css_selector("div.search-result__wrapper")) > 0:
+        if len(self.browser.find_elements_by_css_selector(css_selector_identifier)) > 0:
             return True
         return False
 
@@ -394,7 +394,7 @@ class LinkedinPy:
         temp_search_url = search_url + "&page=1"
         print(temp_search_url)
         time.sleep(10)
-        if self.test_page(search_url=temp_search_url, page_no=1)==False:
+        if self.test_page(search_url=temp_search_url, page_no=1, css_selector_identifier="div.search-result__wrapper")==False:
             self.logger.info("============Definitely no Result, Next Query==============")
             return 0
 
@@ -404,7 +404,7 @@ class LinkedinPy:
             while True and trial < 5 and st > 1:
                 st = random.randint(1, st-1)
                 temp_search_url = search_url + "&page=" + str(st)
-                if self.test_page(temp_search_url,st):
+                if self.test_page(temp_search_url,st, "div.search-result__wrapper"):
                     break
                 trial = trial + 1
         else:
@@ -870,6 +870,109 @@ class LinkedinPy:
         run_time = truncate_float(run_time, 2)
 
         return run_time
+
+    def search_and_apply(self):
+        usualjobslink = "https://www.linkedin.com/jobs"
+        web_address_navigator(Settings,self.browser, usualjobslink)
+
+        job_title_XP = '//input[contains(@id,"jobs-search-box-keyword-id")]'
+        txt_job_title = self.browser.find_element_by_xpath(job_title_XP)
+        print('Entering Job Title')
+        (ActionChains(self.browser)
+            .move_to_element(txt_job_title)
+            .click()
+            .send_keys("Python Developer")
+            .perform())
+        
+        job_location_XP = '//input[contains(@id,"jobs-search-box-location-id")]'
+        txt_job_location = self.browser.find_element_by_xpath(job_location_XP)
+        print('Entering Job Location')
+        (ActionChains(self.browser)
+            .move_to_element(txt_job_location)
+            .click()
+            .send_keys("San Jose, California, United States")
+            .perform())
+        
+            # update server calls for both 'click' and 'send_keys' actions
+        for i in range(2):
+            update_activity(Settings)
+
+        sleep(1)
+        print("Clicking Search Button")
+        job_search_XP = '//button[contains(@class,"jobs-search-box__submit-button")]'
+        btn_job_search = self.browser.find_element_by_xpath(job_search_XP)
+        print(btn_job_search)
+        (ActionChains(self.browser)
+            .move_to_element(btn_job_search)
+            .click()
+            .perform())
+        
+        # update server calls
+        update_activity(Settings)
+
+        sleep(10)
+        input("Press Enter to continue...")
+
+    def search_and_apply(self,
+              job_title,
+              job_location,
+			  distance=50,
+              random_start=True,
+              max_pages=20,
+              max_connects=25,
+              sleep_delay=6):
+        
+        self.logger.info("Searching for: job_title={}, job_location={}, radius={}".format(job_title, job_location, distance))
+        connects = 0
+        prev_connects = -1
+        # https://www.linkedin.com/jobs/search/?keywords=python%20developer&location=San%20Jose%2C%20California%2C%20United%20States&distance=50
+        job_search_url = "https://www.linkedin.com/jobs/search/?"
+        if job_title:
+            job_search_url = job_search_url + "keywords=" + job_title
+        if job_location:
+            job_search_url = job_search_url + "&location=" + job_location
+        if distance:
+            job_search_url = job_search_url + "&distance=" + str(distance)
+
+        temp_job_search_url = job_search_url + "&start=0"
+        print(temp_job_search_url)
+        time.sleep(10)
+        if self.test_page(search_url=temp_job_search_url, page_no=1, css_selector_identifier = "div.jobs-search-results ") == False:
+            self.logger.info("============Definitely no Result, Next Query==============")
+            return 0
+        if random_start:
+
+
+            trial = 0
+            st = 5
+            while True and trial < 5 and st > 1:
+                st = random.randint(1, st-1)
+                temp_job_search_url = job_search_url + "&start=" + str(st * 25)
+                if self.test_page(temp_job_search_url,st, "div.jobs-search-results"):
+                    break
+                trial = trial + 1
+        else:
+            st = 1
+        for page_no in list(range(st, st + max_pages)):
+            try:
+                temp_job_search_url = job_search_url + "&start=" + str(page_no)
+                if page_no > st and st > 1:
+                    web_address_navigator(Settings,self.browser, temp_job_search_url)
+                self.logger.info("Starting page: {}".format(page_no))
+
+                for jc in range(2, 11):
+                    sleep(1)
+                    self.browser.execute_script("window.scrollTo(0, document.body.scrollHeight/" + str(jc) + "-100);")
+                if len(self.browser.find_elements_by_css_selector("div.jobs-search-results"))==0:
+                    self.logger.info("============Last Page Reached or asking for Premium membership==============")
+                    break
+                for i in range(0, len(self.browser.find_elements_by_css_selector("div.jobs-search-results"))):
+                    print(i)
+            except Exception as e:
+                self.logger.error(e)   
+        input("Press Enter to continue...")
+
+
 
 @contextmanager
 def smart_run(session):
